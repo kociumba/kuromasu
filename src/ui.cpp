@@ -44,7 +44,7 @@ bool confirm_popup(const char* title, const char* message, bool* open) {
         float totalWidth = buttonWidth * 2 + spacing;
         ImGui::SetCursorPosX((ImGui::GetWindowWidth() - totalWidth) * 0.5f);
 
-        if (ImGui::Button("Confirm", ImVec2(buttonWidth, 0))) {
+        if (ImGui::Button(ICON_FA_CHECK "Confirm", ImVec2(buttonWidth, 0))) {
             confirmed = true;
             ImGui::CloseCurrentPopup();
         }
@@ -55,7 +55,9 @@ bool confirm_popup(const char* title, const char* message, bool* open) {
 
         ImGui::SameLine();
 
-        if (ImGui::Button("Cancel", ImVec2(buttonWidth, 0))) { ImGui::CloseCurrentPopup(); }
+        if (ImGui::Button(ICON_FA_XMARK "Cancel", ImVec2(buttonWidth, 0))) {
+            ImGui::CloseCurrentPopup();
+        }
         if (ImGui::IsKeyPressed(ImGuiKey_Escape)) { ImGui::CloseCurrentPopup(); }
 
         ImGui::EndPopup();
