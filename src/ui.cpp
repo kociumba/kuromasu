@@ -1,5 +1,5 @@
 #include "ui.h"
-#include <extras/IconsFontAwesome6.h>
+#include "external/IconsFontAwesome6.h"
 #include "input.h"
 #include "kuromasu.h"
 #include "rendering.h"
@@ -18,7 +18,7 @@ static float info_offset = 60.0f;
 static float info_offset = 20.0f;
 #endif
 
-bool confirm_popup(const char* title, const char* message, bool* open) {
+bool confirm_popup(ctx_t* ctx, const char* title, const char* message, bool* open) {
     if (*open) {
         ImGui::OpenPopup(title);
         *open = false;
@@ -30,7 +30,7 @@ bool confirm_popup(const char* title, const char* message, bool* open) {
     ImGui::SetNextWindowPos(center, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
 
     float minWidth = std::min(300.0f, ImGui::GetMainViewport()->Size.x * 0.85f);
-    ImGui::SetNextWindowSizeConstraints(ImVec2(scale_to_DPIF(minWidth), 0),
+    ImGui::SetNextWindowSizeConstraints(ImVec2(scale_to_DPIF(minWidth, ctx->window), 0),
         ImVec2(ImGui::GetMainViewport()->Size.x * 0.85f, FLT_MAX));
 
     if (ImGui::BeginPopupModal(
@@ -39,7 +39,7 @@ bool confirm_popup(const char* title, const char* message, bool* open) {
         ImGui::Separator();
         ImGui::Spacing();
 
-        float buttonWidth = scale_to_DPIF(80.0f);
+        float buttonWidth = scale_to_DPIF(80.0f, ctx->window);
         float spacing = ImGui::GetStyle().ItemSpacing.x;
         float totalWidth = buttonWidth * 2 + spacing;
         ImGui::SetCursorPosX((ImGui::GetWindowWidth() - totalWidth) * 0.5f);
@@ -77,7 +77,11 @@ void render_section_header(const char* label, const char* icon = nullptr) {
     ImGui::Separator();
 }
 
-void board_controls(state_t& state) {
+void board_controls(ctx_t* ctx) {
+    auto& state = ctx->state;
+    int w, h;
+    SDL_GetWindowSizeInPixels(ctx->window, &w, &h);
+
     ImGui::Text("Kuromasu");
 
     ImGui::SameLine(ImGui::GetContentRegionAvail().x - info_offset);
@@ -94,7 +98,7 @@ void board_controls(state_t& state) {
     if (ImGui::BeginPopup("Kuromasu Info")) {
         ImGui::Text("Kuromasu puzzles");
         ImGui::Separator();
-        ImGui::PushTextWrapPos(GetScreenWidth());
+        ImGui::PushTextWrapPos(w);
         ImGui::TextUnformatted(info_text);
         ImGui::PopTextWrapPos();
         // ImGui::Separator();
@@ -149,7 +153,7 @@ void board_controls(state_t& state) {
         ImGui::EndPopup();
     }
 
-    if (confirm_popup("Reset current board ?", "Are you sure ?", &clear_popup)) {
+    if (confirm_popup(ctx, "Reset current board ?", "Are you sure ?", &clear_popup)) {
         state.game = state.starting_pos;
     }
 

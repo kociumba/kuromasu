@@ -2,9 +2,8 @@
 #define UI_H
 
 #include <imgui.h>
-#include <raylib.h>
 #include "common.h"
 
-void board_controls(state_t& state);
+void board_controls(ctx_t* ctx);
 
 #endif /* UI_H */

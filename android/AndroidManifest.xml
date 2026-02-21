@@ -10,13 +10,15 @@
 
     <application 
         android:label="Kuromasu" 
-        android:hasCode="false"
+        android:hasCode="true"
         android:extractNativeLibs="true">
         
-        <activity android:name="android.app.NativeActivity"
+        <activity android:name="org.libsdl.app.SDLActivity"
             android:label="Kuromasu"
             android:configChanges="orientation|keyboardHidden|screenSize"
-            android:exported="true">
+            android:exported="true"
+            android:theme="@android:style/Theme.NoTitleBar.Fullscreen"
+            android:launchMode="singleTask">
             
             <meta-data android:name="android.app.lib_name" android:value="kuromasu" />
             

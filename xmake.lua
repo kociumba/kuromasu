@@ -16,62 +16,8 @@ package("ktl")
     end)
 package_end()
 
-package("_rlimgui")
-    set_homepage("https://github.com/raylib-extras/rlImGui")
-    set_description("A Raylib integration with DearImGui")
-    set_license("zlib")
-
-    add_urls("https://github.com/raylib-extras/rlImGui.git")
-    add_versions("2025.11.27", "dc7f97679a024eee8f5f009e77cc311748200415")
-
-    if is_plat("android") then
-        add_patches("2025.11.27", "patches/rlImGui.diff", "A1BCC9CDA9734A0700F114172EFC77A59523BD043AD5A8E9CD66191B461DC0BC")
-    end
-
-    if is_plat("windows") then
-        add_configs("shared", {description = "Build shared library.", default = false, type = "boolean", readonly = true})
-    end
-
-    add_deps("raylib")
-    add_deps("imgui v1.92.5-docking", {configs = {freetype = true}})
-
-    on_install("!bsd and !iphoneos", function (package)
-        io.writefile("xmake.lua", [[
-            add_rules("mode.debug", "mode.release")
-            set_languages("c99", "c++17")
-
-            add_requires("raylib")
-            add_requires("imgui v1.92.5-docking", {configs = {freetype = true}})
-
-            if is_plat("linux") then
-                add_defines("_GLFW_X11", "_GNU_SOURCE")
-            end
-
-            if is_plat("android") then
-                add_defines("PLATFORM_ANDROID")
-            end
-
-            target("rlImGui")
-                set_kind("$(kind)")
-                add_files("*.cpp")
-                add_headerfiles("*.h", "(extras/**.h)")
-                add_includedirs(".", {public = true})
-                add_packages("raylib", "imgui")
-                add_defines("IMGUI_DISABLE_OBSOLETE_FUNCTIONS", "IMGUI_DISABLE_OBSOLETE_KEYIO")
-        ]])
-        import("package.tools.xmake").install(package)
-    end)
-
-    on_test(function (package)
-        assert(package:check_cxxsnippets({test = [[
-            void test() {
-                rlImGuiBegin();
-            }
-        ]]}, {includes = {"rlImGui.h"}, configs = {languages = "c++17"}}))
-    end)
-package_end()
-
-add_requires("ktl 39b236d", "_rlimgui")
+add_requires("imgui v1.92.5-docking", {configs = {freetype = true, sdl3 = true, sdl3_renderer = true}})
+add_requires("ktl 39b236d", "libsdl3_ttf", "libsdl3_image")
 set_languages("cxx23")
 
 if is_mode("release") then 
@@ -82,7 +28,7 @@ target("kuromasu")
     set_kind("binary")
     add_files("src/**.cpp")
     add_headerfiles("src/**.h")
-    add_packages("ktl", "_rlimgui")
+    add_packages("ktl", "imgui", "libsdl3_ttf", "libsdl3_image")
     add_extrafiles("assets/**")
 
     add_rules("utils.bin2obj", {extensions = {".ttf"}})
@@ -102,8 +48,8 @@ target("kuromasu")
             package_name = "xyz.kociumba.kuromasu",
             keystore = "android/debug.keystore",
             keystore_pass = "android",
-            native_app_glue = true,
-            logcat_filters = {"kuromasu", "raylib"},
+            native_app_glue = false,
+            logcat_filters = {"kuromasu", "sdl", "SDL", "dlopen"},
         })
     else 
         add_defines("ASSET_DIR=\"assets/\"")
