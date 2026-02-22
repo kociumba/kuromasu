@@ -16,19 +16,23 @@ package("ktl")
     end)
 package_end()
 
-add_requires("imgui v1.92.5-docking", {configs = {freetype = true, sdl3 = true, sdl3_renderer = true}})
-add_requires("ktl 39b236d", "libsdl3_ttf", "libsdl3_image")
+add_requires("imgui v1.92.5-docking", {configs = {freetype = true}})
+add_requires("ktl 39b236d", "libsdl3_ttf", "libsdl3_image", "libsdl3")
 set_languages("cxx23")
+
+if is_plat("android") then
+    add_requireconfs("*", {configs = {shared = true}})
+end
 
 if is_mode("release") then 
     set_policy("build.optimization.lto", true)
 end
 
 target("kuromasu")
-    set_kind("binary")
     add_files("src/**.cpp")
-    add_headerfiles("src/**.h")
-    add_packages("ktl", "imgui", "libsdl3_ttf", "libsdl3_image")
+    add_files("thirdparty/**.cpp")
+    add_includedirs("thirdparty")
+    add_packages("ktl", "imgui", "libsdl3_ttf", "libsdl3_image", "libsdl3")
     add_extrafiles("assets/**")
 
     add_rules("utils.bin2obj", {extensions = {".ttf"}})
@@ -41,18 +45,12 @@ target("kuromasu")
     if is_plat("android") then
         add_defines("__ANDROID__", "ASSET_DIR=\"\"")
         add_syslinks("android", "log")
-        add_rules("android.native_app", {
-            android_sdk_version = "35",
-            android_manifest = "android/AndroidManifest.xml",
-            android_assets = "assets",
-            package_name = "xyz.kociumba.kuromasu",
-            keystore = "android/debug.keystore",
-            keystore_pass = "android",
-            native_app_glue = false,
-            logcat_filters = {"kuromasu", "sdl", "SDL", "dlopen"},
-        })
+        set_kind("shared")
+        set_runtimes("c++_shared")
     else 
         add_defines("ASSET_DIR=\"assets/\"")
+        set_kind("binary")
+        add_headerfiles("src/**.h")
     end
 
     if not is_plat("android") then

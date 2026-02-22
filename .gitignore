@@ -83,3 +83,9 @@ build
 concat.py
 all_sources.txt
 vars.bak
+
+# android
+.gradle
+*.apk
+*.so
+**/local.properties

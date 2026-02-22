@@ -1,0 +1,76 @@
+plugins {
+     id 'com.android.application'
+     id 'org.tboox.gradle-xmake-plugin' version '1.2.2'
+}
+
+android {
+    namespace = "xyz.kociumba.kuromasu"
+    compileSdkVersion 35
+    ndkVersion = "28.2.13676358"
+    defaultConfig {
+        minSdkVersion 21
+        targetSdkVersion 35
+        versionCode 1
+        versionName "1.0"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    if (!project.hasProperty('EXCLUDE_NATIVE_LIBS')) {
+        sourceSets {
+            main {
+                assets {
+                    srcDirs += "../../assets"
+                }
+            }
+        }
+
+        externalNativeBuild {
+            xmake {
+                path "../../xmake.lua"
+                ndk System.getenv("ANDROID_NDK_ROOT")
+                abiFilters "arm64-v8a"
+            }
+        }
+
+    }
+
+    lint {
+        abortOnError = false
+    }
+}
+
+dependencies {
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+}
+
+// tasks.register('copyApkToRoot', Copy) {
+//     group = 'convenience'
+//     description = 'Copies built APK(s) to project root / apks folder'
+
+//     into rootProject.file('../../build/android/apks')
+// }
+
+// android.applicationVariants.all { variant ->
+//     // if (variant.buildType.name != 'release') return
+
+//     def assembleTask = tasks.named("assemble${variant.name.capitalize()}")
+
+//     copyApkToRoot {
+//         dependsOn assembleTask
+//     }
+
+//     variant.outputs.all { output ->
+//         copyApkToRoot.from(output.outputFile)
+
+//         copyApkToRoot.rename { String fileName ->
+//             def newName = "kuromasu_${variant.name}.apk"
+//             return newName
+//         }
+//     }
+// }

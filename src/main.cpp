@@ -79,9 +79,6 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
     ImGui_ImplSDL3_InitForSDLRenderer(ctx->window, ctx->renderer);
     ImGui_ImplSDLRenderer3_Init(ctx->renderer);
 
-    ctx->state.win_image = load_texture(ASSET_DIR "win.jpg", ctx->renderer);
-    ctx->state.cursor = load_texture(ASSET_DIR "cursor.png", ctx->renderer);
-
     static const ImWchar icons_ranges[] = {ICON_MIN_FA, ICON_MAX_FA, 0};
     ImFontConfig icons_config;
     icons_config.MergeMode = true;
@@ -125,6 +122,9 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
     s.TouchExtraPadding = {3, 3};
     s.ScrollbarSize *= scale_to_DPIF(2, ctx->window);
 #endif
+
+    ctx->state.win_image = load_texture(ASSET_DIR "win.jpg", ctx->renderer);
+    ctx->state.cursor = load_texture(ASSET_DIR "cursor.png", ctx->renderer);
 
     ctx->state.seed = generate_board(ctx->state);
 
@@ -259,6 +259,33 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
 
     ImGui::Render();
     ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), ctx->renderer);
+
+    if (state.custom_cursor) {
+        if (SDL_HideCursor()) {
+            auto& io = ImGui::GetIO();
+
+            if (true) {
+                float logical_x = io.MousePos.x;
+                float logical_y = io.MousePos.y;
+
+                float pixel_x = logical_x * scale_to_DPIF(1.0f, ctx->window);
+                float pixel_y = logical_y * scale_to_DPIF(1.0f, ctx->window);
+
+                float cursor_w =
+                    static_cast<float>(state.cursor.w) * scale_to_DPIF(1.0f, ctx->window);
+                float cursor_h =
+                    static_cast<float>(state.cursor.h) * scale_to_DPIF(1.0f, ctx->window);
+
+                SDL_FRect dest = {pixel_x, pixel_y, cursor_w, cursor_h};
+                SDL_RenderTexture(ctx->renderer, state.cursor.tex, nullptr, &dest);
+            }
+        } else {
+            SDL_Log("SDL_HideCursor failed: %s", SDL_GetError());
+        }
+    } else {
+        if (!SDL_ShowCursor()) { SDL_Log("SDL_ShowCursor failed: %s", SDL_GetError()); }
+    }
+
     SDL_RenderPresent(ctx->renderer);
 
     return SDL_APP_CONTINUE;
