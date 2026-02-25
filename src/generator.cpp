@@ -134,6 +134,9 @@ uint32_t generate_board(state_t& s,
             return true;
         });
 
+    s.black_chance = black_chance;
+    s.observer_chance = observer_chance;
+    
     s.solved_state = s.game;
 
     // 6. convert solved state into starting position

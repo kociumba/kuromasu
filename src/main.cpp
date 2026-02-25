@@ -1,6 +1,9 @@
 #include <imgui_internal.h>
+#define NOTIFY_RENDER_OUTSIDE_MAIN_WINDOW false
+#include <ImGuiNotify.hpp>
 #include "common.h"
 #include "external/FA6FreeSolidFontData.h"
+#include "external/IconsFontAwesome6.h"
 #include "input.h"
 #include "kuromasu.h"
 #include "rendering.h"
@@ -14,9 +17,6 @@ extern "C" {
 extern const char _binary_Roboto_Regular_ttf_end[];
 extern const char _binary_Roboto_Regular_ttf_start[];
 }
-
-constexpr int ICON_MIN_FA = 0xe005;
-constexpr int ICON_MAX_FA = 0xf8ff;
 
 ktl::Arena g_arena;
 ktl::ArenaAllocator<cell> g_cell_alloc(&g_arena);
@@ -268,12 +268,14 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
 
     ImGui::Image((ImTextureID)ctx->game_tex.tex, render_size);
 
+    ImGui::End();
+    ImGui::PopStyleVar();
+
 #if !defined(NDEBUG) || defined(__ANDROID__)
     debug_overlay(ctx, cursor_origin);
 #endif
 
-    ImGui::End();
-    ImGui::PopStyleVar();
+    ImGui::RenderNotifications();
 
     ImGui::Render();
     ImGui_ImplSDLRenderer3_RenderDrawData(ImGui::GetDrawData(), ctx->renderer);

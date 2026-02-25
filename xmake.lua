@@ -17,7 +17,8 @@ package("ktl")
 package_end()
 
 add_requires("imgui v1.92.5-docking", {configs = {freetype = true}})
-add_requires("ktl 626e972", "libsdl3_ttf", "libsdl3_image", "libsdl3", "tracy")
+add_requires("tracy", {configs = {on_demand = true}})
+add_requires("ktl 626e972", "libsdl3_ttf", "libsdl3_image", "libsdl3", "nlohmann_json")
 set_languages("cxx23")
 
 if is_plat("android") then
@@ -32,7 +33,7 @@ target("kuromasu")
     add_files("src/**.cpp")
     add_files("thirdparty/**.cpp")
     add_includedirs("thirdparty")
-    add_packages("ktl", "imgui", "libsdl3_ttf", "libsdl3_image", "libsdl3", "tracy")
+    add_packages("ktl", "imgui", "libsdl3_ttf", "libsdl3_image", "libsdl3", "tracy", "nlohmann_json")
     add_extrafiles("assets/**")
 
     add_rules("utils.bin2obj", {extensions = {".ttf"}})

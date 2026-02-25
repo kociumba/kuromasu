@@ -1,8 +1,11 @@
 #include "ui.h"
+#define NOTIFY_RENDER_OUTSIDE_MAIN_WINDOW false
+#include <ImGuiNotify.hpp>
 #include "external/IconsFontAwesome6.h"
 #include "input.h"
 #include "kuromasu.h"
 #include "rendering.h"
+#include "serialization.h"
 
 static const char* info_text =
     R"(The board starts with blank cells and some "Observer" white cells
@@ -151,8 +154,26 @@ void board_controls(ctx_t* ctx) {
 
     if (ImGui::BeginPopup("##edit_popup")) {
         if (ImGui::MenuItem(ICON_FA_TRASH "Clear Board")) { clear_popup = true; }
-        // if (ImGui::MenuItem(ICON_FA_FILE_EXPORT "  Export")) {
-        // }
+
+        if (ImGui::MenuItem(ICON_FA_FILE_EXPORT "Export to clipboard")) {
+            auto data = marshal(ctx);
+            SDL_SetClipboardText(data.c_str());
+            ImGui::InsertNotification({ImGuiToastType::Success, 4000, "Copied board to clipboard"});
+        }
+
+        if (ImGui::MenuItem(ICON_FA_FILE_IMPORT "Import from clipboard")) {
+            char* data = SDL_GetClipboardText();
+            auto err = unmarshal(ctx, data);
+            if (err == marshal_error::OK) {
+                ImGui::InsertNotification(
+                    {ImGuiToastType::Success, 4000, "Succesfully loaded from clipboard"});
+            } else {
+                ImGui::InsertNotification({ImGuiToastType::Error,
+                    4000,
+                    "Failed to load from clipboard: %s",
+                    get_marshal_error_message(err)});
+            }
+        }
 
         ImGui::EndPopup();
     }
