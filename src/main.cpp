@@ -18,6 +18,9 @@ extern const char _binary_Roboto_Regular_ttf_start[];
 constexpr int ICON_MIN_FA = 0xe005;
 constexpr int ICON_MAX_FA = 0xf8ff;
 
+ktl::Arena g_arena;
+ktl::ArenaAllocator<cell> g_cell_alloc(&g_arena);
+
 TTF_Font* get_font(state_t& state, int size, const char* path) {
     auto it = state.fonts.find(size);
     if (it != state.fonts.end()) { return it->second; }
@@ -33,12 +36,14 @@ TTF_Font* get_font(state_t& state, int size, const char* path) {
 }
 
 SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
+    zone_scoped_n("init");
+
     auto* ctx = new ctx_t();
     *appstate = ctx;
 
     SDL_SetAppMetadata("kuromasu", "0.0.0", "xyz.kociumba.kuromasu");
 
-    uint32_t window_flags = SDL_WINDOW_OPENGL | SDL_WINDOW_HIGH_PIXEL_DENSITY;
+    uint32_t window_flags = SDL_WINDOW_HIGH_PIXEL_DENSITY;
 #if defined(__ANDROID__)
     window_flags |= SDL_WINDOW_FULLSCREEN;
 #else
@@ -56,12 +61,15 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
         return SDL_APP_FAILURE;
     }
 
+    SDL_SetHint(SDL_HINT_ORIENTATIONS, "Portrait");
+
     if (!SDL_CreateWindowAndRenderer(
             "kuromasu", 800, 600, window_flags, &ctx->window, &ctx->renderer)) {
-        SDL_Log("SDL_CreateWindow failed: %s", SDL_GetError());
+        SDL_Log("SDL_CreateWindowAndRenderer failed: %s", SDL_GetError());
         return SDL_APP_FAILURE;
     }
 
+    SDL_SetRenderVSync(ctx->renderer, 1);
     SDL_SetRenderDrawBlendMode(ctx->renderer, SDL_BLENDMODE_BLEND);
 
     // ImGui setup
@@ -139,6 +147,8 @@ SDL_AppResult SDL_AppInit(void** appstate, int argc, char** argv) {
 }
 
 SDL_AppResult SDL_AppEvent(void* appstate, SDL_Event* event) {
+    zone_scoped_n("sdl events");
+
     auto* ctx = (ctx_t*)appstate;
 
     ImGui_ImplSDL3_ProcessEvent(event);
@@ -154,16 +164,20 @@ SDL_AppResult SDL_AppEvent(void* appstate, SDL_Event* event) {
 }
 
 SDL_AppResult SDL_AppIterate(void* appstate) {
+    frame_mark();
+
     auto* ctx = (ctx_t*)appstate;
     auto& state = ctx->state;
 
     auto current_time = SDL_GetTicksNS();
-    state.dt = (double)(current_time - state.prev_time) / 1'000'000'000.0;
-    state.prev_time = current_time;
+    ctx->state.dt = (float)(current_time - state.prev_time) / 1e9;
+    ctx->state.prev_time = current_time;
 
     ImGui_ImplSDLRenderer3_NewFrame();
     ImGui_ImplSDL3_NewFrame();
     ImGui::NewFrame();
+
+    // ImGui::ShowDemoWindow();
 
     int fb_w, fb_h;
     SDL_GetWindowSizeInPixels(ctx->window, &fb_w, &fb_h);
@@ -254,6 +268,10 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
 
     ImGui::Image((ImTextureID)ctx->game_tex.tex, render_size);
 
+#if !defined(NDEBUG) || defined(__ANDROID__)
+    debug_overlay(ctx, cursor_origin);
+#endif
+
     ImGui::End();
     ImGui::PopStyleVar();
 
@@ -292,7 +310,19 @@ SDL_AppResult SDL_AppIterate(void* appstate) {
 }
 
 void SDL_AppQuit(void* appstate, SDL_AppResult result) {
+    zone_scoped_n("cleanup");
+
     auto* ctx = (ctx_t*)appstate;
+
+    ktl::arena_free(&g_arena);
+
+    for (auto& [_, font_tex] : ctx->state.font_texture_cache) {
+        font_tex.free();
+    }
+
+    for (auto& [size, font] : ctx->state.fonts) {
+        if (font) TTF_CloseFont(font);
+    }
 
     ImGui_ImplSDLRenderer3_Shutdown();
     ImGui_ImplSDL3_Shutdown();

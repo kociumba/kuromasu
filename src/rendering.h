@@ -2,6 +2,7 @@
 #define RENDERING_H
 
 #include "common.h"
+#include <string>
 
 ImVec2 grid_to_screen_pos(const state_t& s, int grid_x, int grid_y);
 ImVec2 grid_to_screen_pos(const state_t& s, ktl::pos2_size grid_pos);
@@ -45,12 +46,15 @@ void draw_filled_circle(SDL_Renderer* renderer,
     float radius,
     SDL_Color color);
 
-void draw_text(SDL_Renderer* renderer,
-    TTF_Font* font,
-    const char* text,
-    float x,
-    float y,
-    SDL_Color color);
+void draw_text(ctx_t* ctx, TTF_Font* font, const char* text, float x, float y, SDL_Color color);
+
+inline int64_t get_font_cache_key(TTF_Font* font, const char* text, SDL_Color color) {
+    size_t h = std::hash<std::string>{}(text);
+    h ^= std::hash<void*>{}(font) + 0x9e3779b9 + (h << 6) + (h >> 2);
+    uint32_t color_packed = (color.r << 24) | (color.g << 16) | (color.b << 8) | color.a;
+    h ^= std::hash<uint32_t>{}(color_packed) + 0x9e3779b9 + (h << 6) + (h >> 2);
+    return (int64_t)h;
+}
 
 void draw_grid(ctx_t* ctx);
 void draw_tooltip(ctx_t* ctx, const char* text, ImVec2 pos, ImVec2 render_size);
@@ -74,5 +78,7 @@ inline float scale_to_DPIF(float value, SDL_Window* window) {
 inline int scale_to_DPII(int value, SDL_Window* window) {
     return (int)(value * get_window_dpi_scale(window) + 0.5f);
 }
+
+void debug_overlay(ctx_t* ctx, ImVec2 pos = ImVec2(10.0f, 10.0f));
 
 #endif /* RENDERING_H */

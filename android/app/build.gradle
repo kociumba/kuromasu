@@ -3,6 +3,9 @@ plugins {
      id 'org.tboox.gradle-xmake-plugin' version '1.2.2'
 }
 
+def taskNames = gradle.startParameter.taskNames.toString().toLowerCase()
+def bm = taskNames.contains("release") ? "release" : "debug"
+
 android {
     namespace = "xyz.kociumba.kuromasu"
     compileSdkVersion 35
@@ -34,6 +37,7 @@ android {
             xmake {
                 path "../../xmake.lua"
                 ndk System.getenv("ANDROID_NDK_ROOT")
+                // buildMode bm
                 abiFilters "arm64-v8a"
             }
         }

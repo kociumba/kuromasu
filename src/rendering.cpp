@@ -1,8 +1,12 @@
 #include "rendering.h"
+#include <SDL3/SDL_render.h>
+#include "common.h"
+#include "external/memory_usage.h"
 #include "input.h"
 #include "math.h"
 
 ImVec2 grid_to_screen_pos(const state_t& s, int grid_x, int grid_y) {
+    zone_scoped_n("grid to screen pos");
     return {s.offset.x + (grid_x * s.cell_size), s.offset.y + (grid_y * s.cell_size)};
 }
 
@@ -11,6 +15,7 @@ ImVec2 grid_to_screen_pos(const state_t& s, ktl::pos2_size grid_pos) {
 }
 
 SDL_FRect grid_cell_rect(const state_t& s, int grid_x, int grid_y) {
+    zone_scoped_n("grid cell rect");
     ImVec2 pos = grid_to_screen_pos(s, grid_x, grid_y);
     return {pos.x, pos.y, s.cell_size, s.cell_size};
 }
@@ -20,6 +25,7 @@ SDL_FRect grid_cell_rect(const state_t& s, ktl::pos2_size grid_pos) {
 }
 
 ImVec2 grid_cell_center(const state_t& s, int grid_x, int grid_y) {
+    zone_scoped_n("grid cell center");
     SDL_FRect r = grid_cell_rect(s, grid_x, grid_y);
     return {r.x + r.w * 0.5f, r.y + r.h * 0.5f};
 }
@@ -29,6 +35,7 @@ ImVec2 grid_cell_center(const state_t& s, ktl::pos2_size pos) {
 }
 
 SDL_FRect grid_rect_from_corners(ktl::pos2_size a, ktl::pos2_size b) {
+    zone_scoped_n("grid rect from corners");
     if (a.x == ktl::pos2_size::invalid_value || a.y == ktl::pos2_size::invalid_value ||
         b.x == ktl::pos2_size::invalid_value || b.y == ktl::pos2_size::invalid_value) {
         return {0, 0, 0, 0};
@@ -43,6 +50,7 @@ SDL_FRect grid_rect_from_corners(ktl::pos2_size a, ktl::pos2_size b) {
 }
 
 SDL_FRect grid_rect_from_topleft_and_size(ktl::pos2_size top_left, ktl::pos2_size size) {
+    zone_scoped_n("grid rect from topleft and size");
     if (top_left.x == ktl::pos2_size::invalid_value ||
         top_left.y == ktl::pos2_size::invalid_value || size.x == ktl::pos2_size::invalid_value ||
         size.y == ktl::pos2_size::invalid_value) {
@@ -53,6 +61,7 @@ SDL_FRect grid_rect_from_topleft_and_size(ktl::pos2_size top_left, ktl::pos2_siz
 }
 
 SDL_FRect grid_region_rect(const state_t& s, SDL_FRect grid_rect) {
+    zone_scoped_n("grid region rect");
     if (grid_rect.w <= 0 || grid_rect.h <= 0) { return {0, 0, 0, 0}; }
 
     ImVec2 screen_pos =
@@ -62,6 +71,7 @@ SDL_FRect grid_region_rect(const state_t& s, SDL_FRect grid_rect) {
 }
 
 SDL_FRect grid_region_rect(const state_t& s, ktl::pos2_size top_left, ktl::pos2_size size) {
+    zone_scoped_n("grid region rect");
     SDL_FRect grid_r = grid_rect_from_topleft_and_size(top_left, size);
     return grid_region_rect(s, grid_r);
 }
@@ -71,6 +81,7 @@ SDL_FRect grid_region_rect(const state_t& s, ktl::pos2_size region) {
 }
 
 bool is_pos_in_rect(ktl::pos2_size pos, SDL_FRect rect) {
+    zone_scoped_n("is pos in rect");
     if (pos.x >= rect.x && pos.x <= (rect.x + rect.w) && pos.y >= rect.y &&
         pos.y <= (rect.y + rect.h)) {
         return true;
@@ -80,6 +91,7 @@ bool is_pos_in_rect(ktl::pos2_size pos, SDL_FRect rect) {
 }
 
 void set_render_color(SDL_Renderer* renderer, SDL_Color color) {
+    zone_scoped_n("set render color");
     SDL_SetRenderDrawColor(renderer, color.r, color.g, color.b, color.a);
 }
 
@@ -88,6 +100,8 @@ void draw_filled_circle(SDL_Renderer* renderer,
     float centerY,
     float radius,
     SDL_Color color) {
+    zone_scoped_n("draw filled circle");
+
     const int segments = 64;
     SDL_Vertex vertices[segments + 2];
     int indices[segments * 3];
@@ -110,34 +124,51 @@ void draw_filled_circle(SDL_Renderer* renderer,
     SDL_RenderGeometry(renderer, NULL, vertices, segments + 2, indices, segments * 3);
 }
 
-void draw_text(SDL_Renderer* renderer,
-    TTF_Font* font,
-    const char* text,
-    float x,
-    float y,
-    SDL_Color color) {
-    if (!text || !font || !renderer) return;
+void draw_text(ctx_t* ctx, TTF_Font* font, const char* text, float x, float y, SDL_Color color) {
+    zone_scoped_n("draw text");
 
-    SDL_Surface* surface = TTF_RenderText_Blended(font, text, 0, color);
-    if (!surface) return;
+    if (!text || !font || !ctx->renderer) return;
 
-    SDL_Texture* texture = SDL_CreateTextureFromSurface(renderer, surface);
-    if (texture) {
-        SDL_FRect dst = {x, y, (float)surface->w, (float)surface->h};
+    uint64_t key = get_font_cache_key(font, text, color);
+    auto it = ctx->state.font_texture_cache.find(key);
+    if (it == ctx->state.font_texture_cache.end()) {
+        zone_scoped_nc("cache miss", PROF_COLOR_RED);
 
-        SDL_RenderTexture(renderer, texture, NULL, &dst);
+        SDL_Surface* surface;
+        SDL_Texture* texture;
 
-        SDL_DestroyTexture(texture);
+        surface = TTF_RenderText_Blended(font, text, 0, color);
+        if (!surface) return;
+
+        texture = SDL_CreateTextureFromSurface(ctx->renderer, surface);
+        if (texture) {
+            SDL_FRect dst = {x, y, (float)surface->w, (float)surface->h};
+
+            SDL_RenderTexture(ctx->renderer, texture, NULL, &dst);
+
+            ctx->state.font_texture_cache[key] =
+                Texture{texture, (float)surface->w, (float)surface->h};
+        }
+        SDL_DestroySurface(surface);
+    } else {
+        zone_scoped_nc("cache hit", PROF_COLOR_GREEN);
+
+        SDL_FRect dst = {x, y, (float)it->second.w, (float)it->second.h};
+        SDL_RenderTexture(ctx->renderer, it->second.tex, NULL, &dst);
     }
-    SDL_DestroySurface(surface);
 }
 
 void draw_grid(ctx_t* ctx) {
+    zone_scoped_n("draw grid");
+
     float delay_duration = 1.0f;
     float fade_speed = 2.0f;
     auto& s = ctx->state;
 
     for (const auto& item : s.game.items()) {
+        zone_scoped_n("draw cell");
+        // zone_text("draw cell (%d : %d)", item.position.x, item.position.y);
+
         ktl::pos2_size pos = item.position;
         SDL_FRect dest = grid_cell_rect(s, pos);
         ImVec2 center = grid_cell_center(s, pos);
@@ -156,10 +187,16 @@ void draw_grid(ctx_t* ctx) {
         }
 
         set_render_color(ctx->renderer, cell_color);
-        SDL_RenderFillRect(ctx->renderer, &dest);
+        {
+            zone_scoped_n("render cell bg");
+            SDL_RenderFillRect(ctx->renderer, &dest);
+        }
 
         set_render_color(ctx->renderer, {0, 0, 0, 255});
-        SDL_RenderRect(ctx->renderer, &dest);
+        {
+            zone_scoped_n("render cell border");
+            SDL_RenderRect(ctx->renderer, &dest);
+        }
 
         if (item.value.mistake) {
             if (item.value.mistake_delay > 0) {
@@ -180,8 +217,13 @@ void draw_grid(ctx_t* ctx) {
         }
 
         if (item.value.type == cell::white && item.value.observer_value != -1) {
+            zone_scoped_n("text measuring");
+
             char* text;
-            SDL_asprintf(&text, "%d", item.value.observer_value);
+            {
+                zone_scoped_n("formatting");
+                SDL_asprintf(&text, "%d", item.value.observer_value);
+            }
 
             int font_size = static_cast<int>(s.cell_size * 0.6f);
             auto font = get_font(s, font_size);
@@ -189,23 +231,33 @@ void draw_grid(ctx_t* ctx) {
             auto text_color = item.value.observer_satisfied ? SDL_Color{130, 130, 130, 255}
                                                             : SDL_Color{0, 0, 0, 255};
 
-            int ascent = TTF_GetFontAscent(font);
-            int descent = TTF_GetFontDescent(font);
+            int ascent, descent;
+            {
+                zone_scoped_n("query font params");
+                ascent = TTF_GetFontAscent(font);
+                descent = TTF_GetFontDescent(font);
+            }
             int visual_height = ascent - descent;
 
             int advance_w = 0;
             int advance_h = 0;
-            TTF_GetStringSize(font, text, 0, &advance_w, &advance_h);
+            {
+                zone_scoped_n("get string size");
+                TTF_GetStringSize(font, text, 0, &advance_w, &advance_h);
+            }
 
             float textX = center.x - advance_w * 0.5f;
             float textY = center.y - advance_h * 0.5f;
 
-            draw_text(ctx->renderer, font, text, textX, textY, text_color);
+            draw_text(ctx, font, text, textX, textY, text_color);
+            SDL_free(text);
         }
     }
 }
 
 void draw_tooltip(ctx_t* ctx, const char* text, ImVec2 pos, ImVec2 render_size) {
+    zone_scoped_n("draw tooltip");
+
     float font_size = 24.0f;
     float padding = 10.0f;
     SDL_Color text_color = {245, 245, 245, 255};
@@ -231,11 +283,12 @@ void draw_tooltip(ctx_t* ctx, const char* text, ImVec2 pos, ImVec2 render_size) 
     set_render_color(ctx->renderer, bg);
     SDL_RenderFillRect(ctx->renderer, &tooltip_rect);
 
-    draw_text(
-        ctx->renderer, font, text, tooltip_rect.x + padding, tooltip_rect.y + padding, text_color);
+    draw_text(ctx, font, text, tooltip_rect.x + padding, tooltip_rect.y + padding, text_color);
 }
 
 void draw_measure_overlay(ctx_t* ctx, ImVec2 window_origin, ImVec2 render_size) {
+    zone_scoped_n("draw measure overlay");
+
     auto& s = ctx->state;
     if (s.measure.rect.w <= 0.0f || s.measure.rect.h <= 0.0f) return;
 
@@ -249,9 +302,12 @@ void draw_measure_overlay(ctx_t* ctx, ImVec2 window_origin, ImVec2 render_size) 
     char* txt;
     SDL_asprintf(&txt, "%.0f, %.0f", s.measure.dims.w, s.measure.dims.h);
     draw_tooltip(ctx, txt, rel_mouse, render_size);
+    SDL_free(txt);
 }
 
 void draw_erase_overlay(ctx_t* ctx) {
+    zone_scoped_n("draw erase overlay");
+
     auto& s = ctx->state;
     if (s.erase.rect.w <= 0.0f || s.erase.rect.h <= 0.0f) return;
 
@@ -261,4 +317,74 @@ void draw_erase_overlay(ctx_t* ctx) {
     SDL_RenderFillRect(ctx->renderer, &s.erase.rect);
     set_render_color(ctx->renderer, blue);
     SDL_RenderRect(ctx->renderer, &s.erase.rect);
+}
+
+void debug_overlay(ctx_t* ctx, ImVec2 pos) {
+    zone_scoped_n("debug overlay");
+
+    static std::vector<float> frame_times;
+    static float time_sum = 0.0f;
+    constexpr int MAX_SAMPLES = 120;
+
+    float dt_ms = ctx->state.dt * 1000.0f;
+    frame_times.push_back(dt_ms);
+    time_sum += dt_ms;
+
+    if (frame_times.size() > MAX_SAMPLES) {
+        time_sum -= frame_times.front();
+        frame_times.erase(frame_times.begin());
+    }
+
+    const float avg_ms = time_sum / static_cast<float>(frame_times.size());
+    const float avg_fps = (avg_ms > 0.0001f) ? 1000.0f / avg_ms : 0.0f;
+
+    ImDrawList* draw_list = ImGui::GetForegroundDrawList();
+    if (!draw_list) return;
+
+    ImU32 color = IM_COL32(245, 245, 245, 255);
+    ImU32 shadow = IM_COL32(10, 10, 20, 160);
+
+    ImU32 fps_color = (avg_fps >= 60.f)   ? IM_COL32(80, 255, 120, 255)
+                      : (avg_fps >= 30.f) ? IM_COL32(255, 220, 80, 255)
+                                          : IM_COL32(255, 70, 70, 255);
+
+    char buf[96];
+    const float font_size = ImGui::GetFontSize();
+    const float line_h = font_size * 1.10f;
+
+    auto print = [&](ImU32 col, const char* fmt, ...) IM_FMTARGS(3) {
+        va_list args;
+        va_start(args, fmt);
+        vsnprintf(buf, sizeof(buf), fmt, args);
+        va_end(args);
+
+        draw_list->AddText(
+            ImGui::GetFont(), font_size, ImVec2(pos.x + 1.2f, pos.y + 1.2f), shadow, buf);
+
+        draw_list->AddText(ImGui::GetFont(), font_size, pos, col, buf);
+
+        pos.y += line_h;
+    };
+
+    print(fps_color,
+        "FPS %.1f (%.2f ms/frame) using %s",
+        avg_fps,
+        avg_ms,
+        SDL_GetRendererName(ctx->renderer));
+
+    print(color, BUILD_IDENTIFIER);
+
+    print(color, "%s", get_memory_usage_str_mb());
+
+    ImGuiIO& io = ImGui::GetIO();
+    bool mouse_valid = ImGui::IsMousePosValid(&io.MousePos);
+    float mouse_x = mouse_valid ? io.MousePos.x : 0.0f;
+    float mouse_y = mouse_valid ? io.MousePos.y : 0.0f;
+
+    print(color, "Mouse %.0f, %.0f", mouse_x, mouse_y);
+
+#if !defined(NDEBUG)
+    print(color, "regions created: %d", g_arena.region_creations);
+    print(color, "cross regions allocations: %d", g_arena.allocations_bigger_than_region_size);
+#endif
 }

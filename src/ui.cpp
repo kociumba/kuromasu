@@ -19,6 +19,8 @@ static float info_offset = 20.0f;
 #endif
 
 bool confirm_popup(ctx_t* ctx, const char* title, const char* message, bool* open) {
+    zone_scoped_n("draw popup");
+
     if (*open) {
         ImGui::OpenPopup(title);
         *open = false;
@@ -78,6 +80,8 @@ void render_section_header(const char* label, const char* icon = nullptr) {
 }
 
 void board_controls(ctx_t* ctx) {
+    zone_scoped_n("draw ui");
+
     auto& state = ctx->state;
     int w, h;
     SDL_GetWindowSizeInPixels(ctx->window, &w, &h);

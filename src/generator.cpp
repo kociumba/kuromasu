@@ -20,6 +20,25 @@ size_t raycast_direction_white(state_t& s, ktl::pos2_size p, size_t dx, size_t d
     return count;
 }
 
+size_t raycast_direction_observers_from_black(state_t& s, ktl::pos2_size start, int dx, int dy) {
+    size_t count = 0;
+
+    int cx = (int)start.x + dx;
+    int cy = (int)start.y + dy;
+
+    while (s.game.in_bounds((size_t)cx, (size_t)cy)) {
+        cell& c = s.game.xy((size_t)cx, (size_t)cy);
+
+        if (c.type == cell::black) { break; }
+
+        if (c.observer_value != -1) { count++; }
+        cx += dx;
+        cy += dy;
+    }
+
+    return count;
+}
+
 size_t visible_white(state_t& s, ktl::pos2_size p) {
     if (!s.game.in_bounds(p)) { return -1; }
 
@@ -73,7 +92,7 @@ uint32_t generate_board(state_t& s,
             cell::type_t old_t = c.type;
             c.type = cell::black;
 
-            // TODO: optimized this later, already probably enough
+            // TODO: optimize this later, already probably enough
             if (!s.game.is_connected([&](cell& c, ktl::pos2_size) -> bool {
                     if (c.type == cell::white) { return true; }
                     return false;
@@ -97,9 +116,27 @@ uint32_t generate_board(state_t& s,
             return true;
         });
 
+    // 5. reject impossible blacks
+    s.game.traverse(
+        {0, 0},
+        [&](cell& c, ktl::pos2_size p) -> bool { return c.type == cell::black; },
+        [&](cell& c, ktl::pos2_size p) -> bool {
+            int visible = 0;
+            visible += raycast_direction_observers_from_black(s, p, -1, 0);
+            visible += raycast_direction_observers_from_black(s, p, 1, 0);
+            visible += raycast_direction_observers_from_black(s, p, 0, -1);
+            visible += raycast_direction_observers_from_black(s, p, 0, 1);
+
+            if (visible == 0) {
+                c.type = cell::white;  // black is unsolvable unset it
+            }
+
+            return true;
+        });
+
     s.solved_state = s.game;
 
-    // 5. convert solved state into starting position
+    // 6. convert solved state into starting position
     s.game.traverse(
         {0, 0},
         [&](cell& c, ktl::pos2_size p) -> bool {

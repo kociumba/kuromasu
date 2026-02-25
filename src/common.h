@@ -6,11 +6,45 @@
 #include <SDL3/SDL_opengl.h>
 #include <SDL3_image/SDL_image.h>
 #include <SDL3_ttf/SDL_ttf.h>
+#define KTL_ARENA_BACKEND 1
+#include <arena.h>
 #include <grid.h>
 #include <imgui.h>
 #include <imgui_impl_sdl3.h>
 #include <imgui_impl_sdlrenderer3.h>
 #include <unordered_map>
+
+#ifdef TRACY_ENABLE
+#include "tracy/Tracy.hpp"
+
+#define frame_mark() FrameMark
+#define zone_scoped_n(name) ZoneScopedN(name)
+#define zone_text(fmt, ...) ZoneTextF(fmt, ##__VA_ARGS__)
+
+#define zone_color(color) ZoneColor(color)
+#define zone_scoped_nc(name, color) ZoneScopedNC(name, color)
+
+#define PROF_COLOR_RED 0xFF0000
+#define PROF_COLOR_GREEN 0x00FF00
+#define PROF_COLOR_BLUE 0x0000FF
+#define PROF_COLOR_YELLOW 0xFFFF00
+#define PROF_COLOR_MAGENTA 0xFF00FF
+#define PROF_COLOR_CYAN 0x00FFFF
+#define PROF_COLOR_WHITE 0xFFFFFF
+
+#else
+
+#define frame_mark()
+#define zone_scoped_n(name)
+#define zone_text(fmt, ...)
+#define zone_color(color)
+#define zone_scoped_nc(name, color)
+
+#endif
+
+#ifndef BUILD_IDENTIFIER
+#define BUILD_IDENTIFIER "unknown-dev"
+#endif
 
 struct cell {
     enum type_t {
@@ -80,9 +114,15 @@ inline Texture load_texture(const char* path, SDL_Renderer* renderer) {
     return t;
 }
 
+using kuromasu_grid = ktl::grid<cell /*, ktl::ArenaAllocator<cell>*/>;
+
+extern ktl::Arena g_arena;
+extern ktl::ArenaAllocator<cell> g_cell_alloc;
+
 struct state_t {
-    ktl::grid<cell> game = ktl::grid<cell>(grid_size.x,
+    kuromasu_grid game = kuromasu_grid(grid_size.x,
         grid_size.y,
+        // g_cell_alloc,
         cell{.type = cell::blank, .observer_value = -1},
         ktl::GRID_GROW_OUTWARD | ktl::GRID_NO_RETAIN_STATE);
 
@@ -93,12 +133,14 @@ struct state_t {
     bool solved = false;
     bool auto_surround = false;
 
-    ktl::grid<cell> solved_state = ktl::grid<cell>(grid_size.x,
+    kuromasu_grid solved_state = kuromasu_grid(grid_size.x,
         grid_size.y,
+        // g_cell_alloc,
         cell{.type = cell::blank, .observer_value = -1},
         ktl::GRID_GROW_OUTWARD | ktl::GRID_NO_RETAIN_STATE);
-    ktl::grid<cell> starting_pos = ktl::grid<cell>(grid_size.x,
+    kuromasu_grid starting_pos = kuromasu_grid(grid_size.x,
         grid_size.y,
+        // g_cell_alloc,
         cell{.type = cell::blank, .observer_value = -1},
         ktl::GRID_GROW_OUTWARD | ktl::GRID_NO_RETAIN_STATE);
 
@@ -106,6 +148,7 @@ struct state_t {
     float cell_size;
 
     std::unordered_map<int, TTF_Font*> fonts;
+    std::unordered_map<int64_t, Texture> font_texture_cache;
     Texture win_image;
 
 #if defined(__ANDROID__)

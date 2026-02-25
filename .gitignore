@@ -83,6 +83,7 @@ build
 concat.py
 all_sources.txt
 vars.bak
+.build_cache
 
 # android
 .gradle

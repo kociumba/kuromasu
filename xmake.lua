@@ -17,7 +17,7 @@ package("ktl")
 package_end()
 
 add_requires("imgui v1.92.5-docking", {configs = {freetype = true}})
-add_requires("ktl 39b236d", "libsdl3_ttf", "libsdl3_image", "libsdl3")
+add_requires("ktl 626e972", "libsdl3_ttf", "libsdl3_image", "libsdl3", "tracy")
 set_languages("cxx23")
 
 if is_plat("android") then
@@ -32,14 +32,23 @@ target("kuromasu")
     add_files("src/**.cpp")
     add_files("thirdparty/**.cpp")
     add_includedirs("thirdparty")
-    add_packages("ktl", "imgui", "libsdl3_ttf", "libsdl3_image", "libsdl3")
+    add_packages("ktl", "imgui", "libsdl3_ttf", "libsdl3_image", "libsdl3", "tracy")
     add_extrafiles("assets/**")
 
     add_rules("utils.bin2obj", {extensions = {".ttf"}})
     add_files("assets/Roboto-Regular.ttf")
 
-    if is_mode("release") and is_plat("windows") then
-        add_rules("win.sdk.application") 
+    
+    if is_mode("release") then
+        if is_plat("windows") then
+            add_rules("win.sdk.application")
+        end 
+
+        if is_plat("android") then 
+            add_defines("NDEBUG")
+        end 
+    else 
+        add_defines("TRACY_ENABLE", "TRACY_ON_DEMAND")
     end
 
     if is_plat("android") then
@@ -52,6 +61,26 @@ target("kuromasu")
         set_kind("binary")
         add_headerfiles("src/**.h")
     end
+
+    before_build(function (target)
+        local hash = os.iorun("git rev-parse --short HEAD"):trim()
+        local commits = os.iorun("git rev-list --count HEAD"):trim()
+
+        
+        local build_file = path.join(target:scriptdir(), ".build_cache")
+        if not os.isfile(build_file) then
+            io.writefile(build_file, "0")
+        end
+
+        local n = tonumber(io.readfile(build_file)) or 0
+        n = n + 1
+        io.writefile(build_file, tostring(n))
+
+        local local_inc = n
+        local full_version = string.format("r%s+%s.%s", commits, local_inc, hash)
+
+        target:add("defines", "BUILD_IDENTIFIER=\"" .. full_version .. "\"")
+    end)
 
     if not is_plat("android") then
         after_build(function (target)
