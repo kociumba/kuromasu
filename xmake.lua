@@ -28,6 +28,7 @@ end
 if is_mode("release") then 
     set_policy("build.optimization.lto", true)
 end
+set_policy("build.progress_style", "multirow")
 
 target("kuromasu")
     add_files("src/**.cpp")
