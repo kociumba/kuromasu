@@ -2,9 +2,11 @@
 
 :: get build mode
 set "BUILD_MODE=release"
+set "XMAKE_YES="
 
 for %%a in (%*) do (
     if "%%~a"=="--debug" set "BUILD_MODE=debug"
+    if "%%~a"=="--yes" set "XMAKE_YES=-y"
 )
 
 :: get parent dir (project root)
@@ -27,8 +29,10 @@ echo    xmake path: %XMAKE_PATH%
 echo.
 
 pushd %PARENT_DIR% && (
-    %XMAKE_PATH% f -c -m %BUILD_MODE%
+    echo %XMAKE_PATH% f -c %XMAKE_YES% -m %BUILD_MODE%
+    %XMAKE_PATH% f -c %XMAKE_YES% -m %BUILD_MODE%
     echo.
+    echo %XMAKE_PATH% b
     %XMAKE_PATH% b
     popd
 )

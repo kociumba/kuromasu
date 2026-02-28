@@ -66,6 +66,7 @@ echo    android sdk: %ANDROID_SDK_HOME%
 echo.
 
 pushd "%ANDROID_DIR%" && (
+    echo gradlew.bat %GRADLE_TASK%%BUILD_MODE%
     call gradlew.bat %GRADLE_TASK%%BUILD_MODE%
     popd
 )

@@ -9,6 +9,7 @@ The build is configured to use xmake and gradle wrapper for android, the interna
 | linux    | `./build_desk.sh [--debug]` |
 
 `--debug`: switches compilation to debug mode, which might be needed for diagnosing certain issues
+`--yes`: silences all prompts from xmake and anwsers yes on them
 
 ### Android
 > Requirements: [xmake](https://xmake.io/), the [Android SDK & NDK](https://developer.android.com/tools/sdkmanager).
@@ -20,6 +21,6 @@ The build is configured to use xmake and gradle wrapper for android, the interna
 
 `--debug`: switches compilation to debug mode, which might be needed for diagnosing certain issues
 > [!NOTE] 
-> Due to some bugs, native code is not fully built in debug mode in android builds but will include additional debug info.
+> Due to some bugs, native code is not fully built in debug mode in android builds, but will include additional debug info.
 
 `--install`: tells gradle to install the resulting `.apk` on an android device connected via adb.

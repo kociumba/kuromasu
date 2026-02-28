@@ -2,11 +2,13 @@
 
 # get build mode
 BUILD_MODE="release"
+XMAKE_YES=""
 
 for arg in "$@"; do
   if [[ "$arg" == "--debug" ]]; then
     BUILD_MODE="debug"
-    break
+  elif [[ "$arg" == "--yes" ]]; then
+    XMAKE_YES="-y"
   fi
 done
 
@@ -29,9 +31,11 @@ echo "   xmake path: $XMAKE_PATH"
 echo
 
 pushd $PARENT_DIR > /dev/null
+set -x
 
-$XMAKE_PATH f -c -m $BUILD_MODE
+$XMAKE_PATH f -c $XMAKE_YES -m $BUILD_MODE
 echo
 $XMAKE_PATH b
 
+{ set +x; } 2>/dev/null
 popd > /dev/null

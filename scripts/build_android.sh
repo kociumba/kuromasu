@@ -57,7 +57,9 @@ echo "   android sdk: $ANDROID_SDK_HOME"
 echo ""
 
 pushd "$ANDROID_DIR" > /dev/null
+set -x
 
 ./gradlew "$GRADLE_TASK$BUILD_MODE"
 
+{ set +x; } 2>/dev/null
 popd > /dev/null
