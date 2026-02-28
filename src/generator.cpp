@@ -56,6 +56,8 @@ uint32_t generate_board(state_t& s,
     std::optional<uint32_t> seed,
     float black_chance,
     float observer_chance) {
+    zone_scoped_n("board generation");
+
     // 1. prepare seed and rng
     std::mt19937 engine;
     uint32_t u_seed;
@@ -136,7 +138,7 @@ uint32_t generate_board(state_t& s,
 
     s.black_chance = black_chance;
     s.observer_chance = observer_chance;
-    
+
     s.solved_state = s.game;
 
     // 6. convert solved state into starting position

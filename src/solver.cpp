@@ -55,6 +55,8 @@ std::pair<ktl::pos2_size, ktl::pos2_size> find_adjacent_pair(
 }
 
 void solve(state_t& s) {
+    zone_scoped_n("solver check");
+
     // reset
     s.solved = false;
     for (auto&& [c, pos] : s.game.items()) {
