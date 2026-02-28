@@ -23,7 +23,7 @@
 #include <imgui.h>
 #include <imgui_internal.h>
 
-#include "external/IconsFontAwesome6.h"
+#include "../src/external/IconsFontAwesome6.h"
 
 /**
  * CONFIGURATION SECTION Start

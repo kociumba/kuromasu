@@ -127,13 +127,20 @@ void solve(state_t& s) {
         }
     }
 
-    // 4. check if all blanks can be white
+    // 4. check if all blanks can be white, and no black are replaced with white
     std::vector<ktl::pos2_size> blanks;
     int count = 0;
     int mistake_count = 0;
     for (auto&& [c, pos] : s.game.items()) {
         if (c.mistake) { mistake_count++; }
         if (c.type == cell::blank) { blanks.push_back(pos); }
+
+        if (c.type == cell::white) {
+            if (s.solved_state.at(pos).type == cell::black) {
+                c.mistake = true;
+                mistake_count++;
+            }
+        }
     }
 
     for (auto pos : blanks) {

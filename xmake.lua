@@ -18,7 +18,7 @@ package_end()
 
 add_requires("imgui v1.92.5-docking", {configs = {freetype = true}})
 add_requires("tracy", {configs = {on_demand = true}})
-add_requires("ktl 626e972", "libsdl3_ttf", "libsdl3_image", "libsdl3", "nlohmann_json")
+add_requires("ktl 99ca814", "libsdl3_ttf", "libsdl3_image", "libsdl3", "nlohmann_json")
 set_languages("cxx23")
 
 if is_plat("android") then
@@ -78,7 +78,7 @@ target("kuromasu")
         io.writefile(build_file, tostring(n))
 
         local local_inc = n
-        local full_version = string.format("r%s+%s.%s", commits, local_inc, hash)
+        local full_version = string.format("r%s.%s+%s", commits, hash, local_inc)
 
         target:add("defines", "BUILD_IDENTIFIER=\"" .. full_version .. "\"")
     end)

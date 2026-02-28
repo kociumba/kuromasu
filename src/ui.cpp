@@ -232,20 +232,24 @@ void board_controls(ctx_t* ctx) {
     ImGui::Spacing();
 
     // Generation chances (percent)
-    static float ui_black_chance = 50.0f;
-    static float ui_observer_chance = 50.0f;
+    static float ui_black_chance = state.black_chance;
+    static float ui_observer_chance = state.observer_chance;
+
+    static bool black_chance_modified = false;
+    static bool observer_chance_modified = false;
+
+    if (!black_chance_modified) { ui_black_chance = state.black_chance; }
+    if (!observer_chance_modified) { ui_observer_chance = state.observer_chance; }
 
     ImGui::SetNextItemWidth(-1);
     if (ImGui::SliderFloat("##black_chance", &ui_black_chance, 0.0f, 100.0f, "Black: %.0f%%")) {
-        if (ui_black_chance < 0.0f) ui_black_chance = 0.0f;
-        if (ui_black_chance > 100.0f) ui_black_chance = 100.0f;
+        black_chance_modified = (ui_black_chance != state.black_chance);
     }
 
     ImGui::SetNextItemWidth(-1);
     if (ImGui::SliderFloat(
             "##observer_chance", &ui_observer_chance, 0.0f, 100.0f, "Observer: %.0f%%")) {
-        if (ui_observer_chance < 0.0f) ui_observer_chance = 0.0f;
-        if (ui_observer_chance > 100.0f) ui_observer_chance = 100.0f;
+        observer_chance_modified = (ui_observer_chance != state.observer_chance);
     }
 
     // Board size controls (preserve user edits across frames)

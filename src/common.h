@@ -127,8 +127,8 @@ struct state_t {
         ktl::GRID_GROW_OUTWARD | ktl::GRID_NO_RETAIN_STATE);
 
     uint32_t seed = 0;
-    float black_chance = 0.f;
-    float observer_chance = 0.f;
+    float black_chance = 50.f;
+    float observer_chance = 50.f;
     float dt = 0;
     uint64_t prev_time = 0;
 
